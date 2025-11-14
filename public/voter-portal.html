@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>सटाणा नगरपालिका निवडणूक 2025</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+  <style>
+    *, *::before, *::after {margin:0;padding:0;box-sizing:border-box;}
+    :root {
+      --primary: #0d47a1;
+      --primary-dark: #08306b;
+      --accent: #ff6f00;
+      --success: #25d366;
+      --danger: #e53935;
+      --light: #f8fafc;
+      --gray: #e2e8f0;
+      --text: #1a202c;
+      --text-light: #718096;
+    }
+    body {
+      font-family: 'Roboto', 'Noto Sans Devanagari', sans-serif;
+      background: linear-gradient(135deg, #e6f2ff 0%, #f0f4ff 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 560px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 24px 32px;
+      text-align: center;
+      position: relative;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><rect fill="%23ff6f00" width="100" height="4"/><rect fill="%23ffffff" y="8" width="100" height="4"/><rect fill="%2300a651" y="16" width="100" height="4"/></svg>') center/cover;
+      opacity: 0.15;
+    }
+    .logo-img {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.3);
+      object-fit: cover;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 8px 0;
+    }
+    .header .subtitle {
+      font-size: 16px;
+      opacity: 0.95;
+      font-weight: 400;
+    }
+    .header .marathi {
+      font-family: 'Noto Sans Devanagari', sans-serif;
+      font-size: 18px;
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    /* Body */
+    .body { padding: 32px; }
+
+    .form-group { margin-bottom: 20px; }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input {
+      width: 100%;
+      padding: 13px 16px;
+      border: 2px solid var(--gray);
+      border-radius: 8px;
+      font-size: 15px;
+      background: white;
+      transition: all 0.2s ease;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(13, 71, 161, 0.15);
+    }
+
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 40px;
+      font-size: 12px;
+      color: var(--primary);
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+    }
+
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    #loginBtn {
+      background: var(--primary);
+      color: white;
+    }
+    #loginBtn:hover:not(:disabled) { background: var(--primary-dark); }
+
+    #logoutBtn {
+      background: #e0e0e0;
+      color: #212121;
+      width: auto;
+      padding: 8px 20px;
+      font-size: 13px;
+      float: right;
+      border-radius: 6px;
+    }
+    #logoutBtn:hover { background: #bdbdbd; }
+
+    /* Search */
+    .search-container { position: relative; }
+    #suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid var(--gray);
+      border-top: none;
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 10;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+      display: none;
+      border-radius: 0 0 8px 8px;
+    }
+    .suggestion-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid #edf2f7;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .suggestion-item:hover { background: #f8fafc; }
+    .suggestion-item strong { color: var(--text); }
+    .suggestion-item small { color: var(--text-light); font-size: 12px; }
+
+    /* Result */
+    #result {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      background: #f8fafc;
+      border: 1px solid var(--gray);
+      border-radius: 12px;
+    }
+    .voter-details h3 {
+      margin-bottom: 16px;
+      color: var(--primary);
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 6px;
+      display: inline-block;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .detail-item {
+      background: white;
+      padding: 12px;
+      border: 1px solid var(--gray);
+      border-radius: 8px;
+    }
+    .detail-item .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--primary);
+      letter-spacing: 0.5px;
+    }
+    .detail-item .value {
+      margin-top: 2px;
+      font-weight: 500;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    /* Share Button */
+    #shareBtn {
+      background: var(--success);
+      color: white;
+      margin-top: 16px;
+      padding: 12px 24px;
+      font-size: 14px;
+      border-radius: 8px;
+      display: inline-block;
+      width: auto;
+    }
+
+    /* Modal */
+    #whatsappModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    #whatsappModal .modal-content {
+      background: white;
+      padding: 24px;
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    }
+
+    /* Messages */
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      border-left: 4px solid;
+      animation: slideIn 0.3s ease;
+    }
+    .message.success { background: #e8f5e9; border-left-color: #43a047; color: #2e7d32; }
+    .message.error { background: #ffebee; border-left-color: var(--danger); color: #c62828; }
+    @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    .footer {
+  text-align: center;
+  margin-top: 32px;
+  color: var(--text-dark, #1e293b); /* darker tone for stronger look */
+  font-weight: 600; /* make text bolder */
+  font-size: 13px; /* slightly larger text */
+}
+
+.footer code {
+  background: #cbd5e1; /* slightly darker background */
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0f172a; /* dark text for better contrast */
+}
+
+    @media (max-width: 480px) {
+      .details-grid { grid-template-columns: 1fr; }
+      #logoutBtn { float: none; display: block; margin: 16px auto 0; width: fit-content; }
+      .header { padding: 20px 16px; }
+      .body { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="header">
+    <img src="/mahraj.jpeg" alt="Yashwantrao Chavan" class="logo-img">
+    <h1>सटाणा नगरपालिका निवडणूक 2025</h1>
+    <div class="subtitle"><b>Developed By : यश कॉम्प्युटर्स (Coding & MS-CIT Classes)</b></div>
+    <div class="marathi">मतदार शोध ॲप प्रभाग क्र. 4</div>
+    <div class="marathi"><b>उमेदवार - संगिता नंदकिशोर सोनवणे</b></div>
+    
+  </div>
+
+  <div class="body">
+
+    <!-- LOGIN SECTION -->
+    <div id="loginSection">
+      <div class="form-group">
+        <label for="userIdInput">Admin ID</label>
+        <input type="text" id="userIdInput" placeholder="Enter admin ID" autocomplete="username"/>
+      </div>
+
+      <div class="form-group" style="position:relative;">
+        <label for="passwordInput">Password</label>
+        <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="off"/>
+        <span class="password-toggle" id="togglePassword">SHOW</span>
+      </div>
+
+      <button id="loginBtn">Login</button>
+    </div>
+
+    <!-- SEARCH SECTION -->
+    <div id="searchSection" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0; font-size:19px; color:var(--text);">Search Voter Records</h2>
+        <button id="logoutBtn">Logout</button>
+      </div>
+      <div style="clear:both;"></div>
+
+      <div class="form-group">
+        <label for="searchInput">Voter Name</label>
+        <div class="search-container">
+          <input type="text" id="searchInput" placeholder="नाव टाइप करा – किमान २ अक्षरे" autocomplete="off"/>
+          <div id="suggestions"></div>
+        </div>
+      </div>
+
+      <div id="result"></div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Local Voter Search System</code></p>
+    <p>© 2025 Yash Computers Coding Classes | MS-CIT Centre</p>
+  </div>
+</div>
+
+<!-- WhatsApp Modal -->
+<div id="whatsappModal">
+  <div class="modal-content">
+    <h3 style="margin:0 0 16px; font-size:18px; color:var(--primary);">WhatsApp वर पाठवा</h3>
+    <input type="text" id="whatsappNumber" placeholder="+919876543210" style="width:100%; padding:13px 16px; border:2px solid var(--gray); border-radius:8px; font-size:15px; margin-bottom:16px;"/>
+    <div style="display:flex; gap:8px;">
+      <button id="sendWhatsapp" style="flex:1; background:var(--success); color:white; border:none; padding:13px; font-weight:600; cursor:pointer; border-radius:8px;">Send</button>
+      <button id="cancelWhatsapp" style="flex:1; background:#e0e0e0; color:#212121; border:none; padding:13px; cursor:pointer; border-radius:8px;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  $(function () {
+    let isLoggedIn = false;
+    let token = null;
+
+    const CSV_HEADERS = [
+      "अ.नं.", "नाव (मराठी)", "English Name","मतदान केंद्र", "उमेदवार", "निशाणी", "आवाहन"
+    ];
+
+    function esc(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+    function msg(text, type) {
+      const txt = typeof text === 'object' ? (text.error || text.message || JSON.stringify(text)) : String(text);
+      const el = $(`<div class="message ${type}">${esc(txt)}</div>`);
+      $('.body').prepend(el);
+      setTimeout(() => el.fadeOut(() => el.remove()), 5000);
+    }
+
+    $('#togglePassword').on('click', function () {
+      const $inp = $('#passwordInput'), t = $inp.attr('type') === 'password' ? 'text' : 'password';
+      $inp.attr('type', t); $(this).text(t === 'password' ? 'SHOW' : 'HIDE');
+    });
+
+    $('#loginBtn').on('click', function () {
+      const id = $('#userIdInput').val().trim(), pw = $('#passwordInput').val();
+      if (!id || !pw) return msg('Enter ID and password', 'error');
+      const $btn = $(this).prop('disabled', true).text('Logging in...');
+      $.ajax({
+        url: '/login',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ user_id: id, password: pw }),
+        dataType: 'json'
+      })
+        .done(r => {
+          if (r.success) {
+            isLoggedIn = true;
+            token = r.token;
+            localStorage.setItem('token', token);
+            $('#loginSection').fadeOut(300, () => $('#searchSection').fadeIn(300));
+            msg('Login successful!', 'success');
+          }
+        })
+        .fail(x => msg(x.responseJSON?.error || 'Login failed', 'error'))
+        .always(() => $btn.prop('disabled', false).text('Login'));
+    });
+
+    $('#userIdInput, #passwordInput').on('keypress', e => { if (e.which === 13) $('#loginBtn').click(); });
+
+    let timeout;
+    $('#searchInput').on('input', function () {
+      if (!isLoggedIn || !token) return;
+      clearTimeout(timeout);
+      const q = this.value.trim(), $s = $('#suggestions');
+      if (q.length < 2) { $s.hide(); $('#result').hide(); return; }
+      $s.html('<div class="suggestion-item loading">शोधत आहे...</div>').show();
+      timeout = setTimeout(() => {
+        $.ajax({
+          url: '/search',
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + token },
+          data: { q: q },
+          dataType: 'json'
+        })
+          .done(data => {
+            $s.empty();
+            if (!data.length) {
+              $s.append('<div class="suggestion-item">कोणतेही परिणाम सापडले नाहीत</div>').show();
+              $('#result').hide();
+              return;
+            }
+            data.forEach(v => {
+              const item = $(`
+                <div class="suggestion-item">
+                  <div><strong>${esc(v.englishName || 'N/A')}</strong></div>
+                  <small>${esc(v.marathiName || 'N/A')}</small>
+                </div>
+              `);
+              item.on('click', () => {
+                $('#searchInput').val(v.englishName);
+                $s.hide();
+                showResult(v);
+              });
+              $s.append(item);
+            });
+            $s.show();
+          })
+          .fail(() => $s.html('<div class="suggestion-item error">शोध अयशस्वी</div>'));
+      }, 300);
+    });
+
+    $(document).on('click', e => { if (!$(e.target).closest('.search-container').length) $('#suggestions').hide(); });
+
+    function showResult(v) {
+      const fieldMap = {
+        serial: "अ.नं.",
+        marathiName: "नाव (मराठी)",
+        englishName: "English Name",
+        polling: "मतदान केंद्र",
+        voteFor: "उमेदवार",
+        vote: "निशाणी",
+        message: "आवाहन"
+      };
+
+      const gridItems = CSV_HEADERS.map(col => {
+        const backendKey = Object.keys(fieldMap).find(k => fieldMap[k] === col);
+        const val = backendKey && v[backendKey] ? String(v[backendKey]).trim() : 'N/A';
+        return `
+          <div class="detail-item">
+            <span class="label">${esc(col)}:</span>
+            <span class="value">${esc(val)}</span>
+          </div>`;
+      }).join('');
+
+      const html = `
+        <div class="voter-details">
+          <h3>मतदाराची माहिती</h3>
+          <div class="details-grid">${gridItems}</div>
+        </div>
+        <div style="margin-top:20px; text-align:center;">
+          <button id="shareBtn">WhatsApp वर शेअर करा</button>
+        </div>`;
+
+      $('#result').html(html).slideDown(300);
+
+      $('#shareBtn').off('click').on('click', () => {
+        $('#whatsappModal').fadeIn(200);
+        $('#whatsappNumber').val('').focus();
+      });
+    }
+
+    $('#cancelWhatsapp').on('click', () => $('#whatsappModal').fadeOut(200));
+    $('#sendWhatsapp').on('click', function () {
+      const raw = $('#whatsappNumber').val().trim();
+      const number = raw.replace(/[^\d+]/g, '');
+      if (!number || !/^(\+?\d{10,15})$/.test(number)) {
+        return msg('कृपया वैध मोबाईल नंबर टाका (+919876543210)', 'error');
+      }
+
+      const lines = ['*मतदार माहिती / Voter Info*'];
+      CSV_HEADERS.forEach((col, index) => {
+        const $label = $(`#result .detail-item .label:contains("${col}")`);
+        const value = $label.length ? $label.next('.value').text().trim() : 'N/A';
+        lines.push(`*${col}:* ${value}`);
+
+        // Add empty line after "मतदान केंद्र" (Polling) and before "उमेदवार" (Umedvar)
+        if (col === "मतदान केंद्र") {
+          lines.push(''); // This creates one blank line
+        }
+      });
+
+      const text = encodeURIComponent(lines.join('\n'));
+      const waURL = `https://wa.me/${number}?text=${text}`;
+      window.open(waURL, '_blank');
+
+      $('#whatsappModal').fadeOut(200);
+      msg('WhatsApp उघडत आहे...', 'success');
+    });
+
+    $('#logoutBtn').on('click', function () {
+      isLoggedIn = false;
+      token = null;
+      localStorage.removeItem('token');
+      $('#searchSection').fadeOut(300, () => $('#loginSection').fadeIn(300));
+      $('#userIdInput,#passwordInput,#searchInput').val('');
+      $('#result,#suggestions').hide().empty();
+      $('#togglePassword').text('SHOW'); $('#passwordInput').attr('type', 'password');
+      msg('Logged out', 'success');
+    });
+
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) {
+      token = savedToken;
+      isLoggedIn = true;
+      $('#loginSection').hide();
+      $('#searchSection').show();
+    }
+
+    $('#userIdInput').focus();
+  });
+</script>
+</body>
+</html>
