@@ -201,7 +201,7 @@ app.get('/search', authenticateToken, (req, res) => {
       const hay = `${v.englishName} ${v.surname} ${v.first} ${v.middle} ${v.marathiName}`.toLowerCase();
       return hay.includes(q);
     })
-    .slice(0, 20)
+    //.slice(0, 20)
     .map(v => ({
       serial:      v.serial,
       marathiName: v.marathiName,
