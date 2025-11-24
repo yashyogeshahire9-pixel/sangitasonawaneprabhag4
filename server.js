@@ -1,31 +1,17 @@
-// server.js
+// server.js (LOGIN-FREE VERSION)
 import express from 'express';
 import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import ExcelJS from 'exceljs';
-import jwt from 'jsonwebtoken';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import rateLimit from 'express-rate-limit';
 import { fileURLToPath } from 'url';
-import 'dotenv/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-// ---------- CONFIG ----------
 const PORT = process.env.PORT || 3000;
-const USERNAME = process.env.USERNAME || 'admin';
-const PASSWORD = process.env.PASSWORD || '12345';
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-
-const validHash = crypto.createHash('sha256').update(PASSWORD).digest('hex');
-
-let voterData = [];
-let ready = false;
 
 // ---------- MIDDLEWARE ----------
 app.set('trust proxy', 1);
@@ -46,213 +32,147 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiter for login
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts, try again later.' },
-});
+// ---------- DATA ----------
+let voterData = [];
+let ready = false;
 
-// ---------- AUTH MIDDLEWARE ----------
-function authenticateToken(req, res, next) {
-  const auth = req.headers['authorization'];
-  const token = auth?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Access token required' });
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired token' });
-    req.user = user;
-    next();
-  });
-}
-
-// ---------- DATA LOADING (XLSX ONLY) ----------
+// ---------- LOAD XLSX ----------
 async function loadData() {
-  console.log('Starting data load (XLSX)...');
+  console.log('Loading voter data from ourdata.xlsx...');
   const start = Date.now();
   voterData = [];
   ready = false;
 
-  const seen = new Set(); // dedupe
-  const addVoter = (v) => {
-    const key = `${v.serial}|${v.englishName}`.toLowerCase().trim();
-    if (!seen.has(key) && v.englishName.trim()) {
-      seen.add(key);
-      voterData.push(v);
-    }
-  };
-
-  const timeout = setTimeout(() => {
-    console.warn('Data load timeout – forcing ready');
-    ready = true;
-  }, 15000); // generous for large Excel files
+  const seen = new Set();
 
   try {
-    // ----- LOAD XLSX -----
     const xlsxPath = path.join(__dirname, 'ourdata.xlsx');
-    if (!fs.existsSync(xlsxPath)) throw new Error('ourdata.xlsx not found');
+    if (!fs.existsSync(xlsxPath)) {
+      throw new Error('ourdata.xlsx file not found in project root!');
+    }
 
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.readFile(xlsxPath);
     const sheet = workbook.worksheets[0];
-    if (!sheet) throw new Error('No worksheet in XLSX');
+    if (!sheet) throw new Error('No worksheet found in Excel file');
 
-    // ---- Build column map (case‑insensitive, trim, normalize spaces) ----
+    // Build flexible column mapping
     const headerRow = sheet.getRow(1).values;
     const col = {};
     headerRow.forEach((h, i) => {
       if (h) {
-        const norm = h.toString().trim().toLowerCase().replace(/\s+/g, ' ');
-        col[norm] = i;
+        const key = h.toString().trim().toLowerCase().replace(/\s+/g, ' ');
+        col[key] = i;
       }
     });
 
-    // Helper to fetch a cell value by any possible header name
     const get = (names, row) => {
-      for (const n of names) {
-        const idx = col[n.toLowerCase().replace(/\s+/g, ' ')];
+      for (const name of names) {
+        const idx = col[name.toLowerCase().replace(/\s+/g, ' ')];
         if (idx && row[idx]) return row[idx].toString().trim();
       }
       return '';
     };
 
-    // ---- Process rows ----
     sheet.eachRow({ includeEmpty: false }, (row, rowNum) => {
       if (rowNum === 1) return; // skip header
 
       const v = row.values;
 
       const voter = {
-        // Serial number
-        serial: get(['अ.नं.', 'अ नं', 'sr no', 'serial', 'अ.क्र.', 'अ क्र'], v) || rowNum.toString(),
-
-        // Names
+        serial:      get(['अ.नं.', 'अ नं', 'sr no', 'serial', 'अ.क्र.', 'अ क्र'], v) || rowNum.toString(),
         marathiName: get(['नाव (मराठी)', 'नाव मराठी', 'marathi name'], v),
         englishName: get(['english name', 'englishname'], v),
-    
-
-        // Polling booth
-        polling: get(['मतदान केंद्र', 'polling booth', 'polling station'], v),
-
-        // NEW fields – exact column names you gave
-        voteFor: get(['उमेदवार', 'candidate', 'vote for', 'vote_for'], v),   // उमेदवार
-        vote:    get(['निशाणी', 'symbol', 'निशाणी - कमळ', 'vote symbol'], v), // निशाणी
-        message: get(['message', 'आवाहन', 'msg'], v),
+        polling:     get(['मतदान केंद्र', 'polling booth', 'polling station'], v),
+        voteFor:     get(['उमेदवार', 'candidate', 'vote for'], v),
+        vote:        get(['निशाणी', 'symbol'], v),
+        message:     get(['आवाहन', 'message', 'msg'], v),
       };
 
-      addVoter(voter);
+      // Deduplicate
+      const key = `${voter.serial}|${voter.englishName}`.toLowerCase();
+      if (voter.englishName && !seen.has(key)) {
+        seen.add(key);
+        voterData.push(voter);
+      }
     });
 
-    clearTimeout(timeout);
     ready = true;
-    console.log(`XLSX loaded: ${voterData.length} unique records in ${Date.now() - start}ms`);
+    console.log(`Loaded ${voterData.length} voters in ${(Date.now() - start)}ms`);
   } catch (err) {
-    clearTimeout(timeout);
-    console.error('Load error:', err.message);
-    ready = true;
+    console.error('Error loading data:', err.message);
+    ready = true; // still allow server to start
   }
 }
 
-// ---------- PRELOAD ----------
-console.log('Preloading data...');
-loadData().catch(err => {
-  console.error('Preload failed:', err);
-  ready = true;
-});
+// Load data on startup
+loadData();
 
-app.get('/debug-data', (req, res) => res.json(voterData.slice(0, 2)));
-
-// Dev: reload on file change
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+// Optional: Auto-reload when Excel file changes (dev only)
+if (process.env.NODE_ENV !== 'production') {
   const xlsxPath = path.join(__dirname, 'ourdata.xlsx');
   if (fs.existsSync(xlsxPath)) {
     fs.watchFile(xlsxPath, (curr, prev) => {
       if (curr.mtime !== prev.mtime) {
-        console.log('ourdata.xlsx changed → reloading...');
-        loadData().catch(console.error);
+        console.log('ourdata.xlsx changed → Reloading...');
+        loadData();
       }
     });
   }
 }
 
-// ---------- ROUTES ----------
-app.post('/login', loginLimiter, (req, res) => {
-  const { user_id, password } = req.body || {};
-  if (!user_id || !password) return res.status(400).json({ error: 'Username and password required' });
-
-  const hash = crypto.createHash('sha256').update(password).digest('hex');
-  if (user_id === USERNAME && hash === validHash) {
-    const token = jwt.sign({ user: USERNAME }, JWT_SECRET, { expiresIn: '2h' });
-    return res.json({ success: true, token });
+// ---------- PUBLIC SEARCH ROUTE (NO AUTH REQUIRED) ----------
+app.get('/search', (req, res) => {
+  if (!ready) {
+    return res.status(503).json({ error: 'Data is still loading, please wait...' });
   }
-  return res.status(401).json({ error: 'Invalid credentials' });
-});
 
-app.get('/search', authenticateToken, (req, res) => {
-  if (!ready) return res.status(503).json({ error: 'Data loading…' });
-
-  const q = (req.query.q || '').toString().toLowerCase().trim().substring(0, 50);
-  if (q.length < 2) return res.json([]);
+  const q = (req.query.q || '').toString().trim().toLowerCase();
+  if (q.length < 2) {
+    return res.json([]);
+  }
 
   const results = voterData
     .filter(v => {
-      const hay = `${v.englishName} ${v.surname} ${v.first} ${v.middle} ${v.marathiName}`.toLowerCase();
-      return hay.includes(q);
+      const searchIn = `${v.englishName} ${v.marathiName} ${v.polling}`.toLowerCase();
+      return searchIn.includes(q);
     })
-    //.slice(0, 20)
+    //.slice(0, 20) // limit results
     .map(v => ({
-      serial:      v.serial,
+      serial: v.serial,
       marathiName: v.marathiName,
       englishName: v.englishName,
-      surname:     v.surname,
-      first:       v.first,
-      middle:      v.middle,
-      polling:     v.polling,
-      voteFor:     v.voteFor,
-      vote:        v.vote,
-      message:     v.message,
+      polling: v.polling,
+      voteFor: v.voteFor,
+      vote: v.vote,
+      message: v.message,
     }));
 
   res.json(results);
 });
 
-app.post('/admin/reload', authenticateToken, async (req, res) => {
-  console.log('Manual reload requested');
-  await loadData();
-  res.json({ success: true, message: `Reloaded: ${voterData.length} records` });
-});
-
+// Debug endpoint (optional – remove in production if you want)
 app.get('/debug', (req, res) => {
   res.json({
     ready,
-    totalRecords: voterData.length,
-    xlsxExists: fs.existsSync(path.join(__dirname, 'ourdata.xlsx')),
-    sampleNames: voterData.slice(0, 3).map(v => v.englishName || v.marathiName),
-    files: fs.readdirSync(__dirname).filter(f => f.endsWith('.xlsx')),
+    totalVoters: voterData.length,
+    sample: voterData.slice(0, 3).map(v => ({ english: v.englishName, marathi: v.marathiName })),
   });
 });
 
+// Serve frontend
 app.get('*', (req, res) => {
   const htmlPath = path.join(__dirname, 'public', 'voter-portal.html');
-  fs.existsSync(htmlPath)
-    ? res.sendFile(htmlPath)
-    : res.status(404).send('Frontend not found – check public/ folder');
+  if (fs.existsSync(htmlPath)) {
+    res.sendFile(htmlPath);
+  } else {
+    res.status(404).send('voter-portal.html not found in /public folder');
+  }
 });
 
-// ---------- ERROR & SHUTDOWN ----------
-app.use((err, _req, res, _next) => {
-  console.error('Unhandled Error:', err);
-  res.status(500).json({ error: 'Server error' });
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Public search: http://localhost:${PORT}/search?q=ram`);
+  console.log(`Total voters loaded: ${voterData.length} (ready: ${ready})`);
 });
-
-const server = app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Data ready: ${ready ? 'Yes' : 'Loading...'} | Records: ${voterData.length}`);
-});
-
-process.on('SIGTERM', () => server.close(() => process.exit(0)));
-process.on('SIGINT', () => server.close(() => process.exit(0)));
-process.on('unhandledRejection', r => console.error('Unhandled Rejection:', r));
-process.on('uncaughtException', e => { console.error('Crash:', e); process.exit(1); });
